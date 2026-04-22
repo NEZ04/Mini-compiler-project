@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Compiler IDE</title>
+
+    <style>
+        body {
+            background: #1e1e1e;
+            color: white;
+            font-family: Consolas;
+            padding: 10px;
+        }
+
+        h1 {
+            color: #569cd6;
+        }
+
+        .editor-container {
+            position: relative;
+        }
+
+        textarea {
+            width: 100%;
+            height: 200px;
+            background: #252526;
+            color: #d4d4d4;
+            border: 1px solid #444;
+            padding: 10px;
+            font-size: 14px;
+            position: relative;
+            z-index: 2;
+        }
+
+        #highlight {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 200px;
+            padding: 10px;
+            pointer-events: none;
+            color: transparent;
+            white-space: pre-wrap;
+            z-index: 1;
+        }
+
+        button {
+            background: #0e639c;
+            color: white;
+            padding: 8px 15px;
+            border: none;
+            margin-right: 10px;
+            cursor: pointer;
+        }
+
+        .panel {
+            width: 24%;
+            display: inline-block;
+            vertical-align: top;
+            margin-right: 5px;
+        }
+
+        .box {
+            background: #252526;
+            padding: 10px;
+            height: 220px;
+            overflow: auto;
+            border: 1px solid #333;
+        }
+
+        h3 {
+            color: #569cd6;
+        }
+    </style>
+</head>
+
+<body>
+
+<h1>Mini Compiler IDE (LEX & YACC)</h1>
+
+<div class="editor-container">
+    <div id="highlight"></div>
+    <textarea id="code">
+int a;
+b = a + 10;
+    </textarea>
+</div>
+
+<br><br>
+
+<button onclick="compile()">Compile</button>
+<button onclick="clearAll()">Clear</button>
+
+<hr>
+
+<div class="panel">
+    <h3>Tokens</h3>
+    <div class="box" id="tokens"></div>
+</div>
+
+<div class="panel">
+    <h3>Symbol Table</h3>
+    <div class="box" id="symbols"></div>
+</div>
+
+<div class="panel">
+    <h3>IR</h3>
+    <div class="box" id="ir"></div>
+</div>
+
+<div class="panel">
+    <h3>AST</h3>
+    <div class="box" id="ast"></div>
+</div>
+
+<hr>
+
+<h3>Errors</h3>
+<div class="box" id="error"></div>
+
+<script>
+function compile() {
+    let code = document.getElementById("code").value;
+
+    fetch("/compile", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({code: code})
+    })
+    .then(res => res.json())
+    .then(data => {
+
+        document.getElementById("tokens").innerText =
+            (data.tokens || []).join("\n");
+
+        document.getElementById("symbols").innerText =
+            (data.symbol_table || [])
+            .map(x => `${x.name} : ${x.type} (used ${x.occurrences || 0} times)`)
+            .join("\n");
+
+        document.getElementById("ir").innerText =
+            (data.ir || []).join("\n");
+
+        document.getElementById("ast").innerText =
+            JSON.stringify(data.ast || {}, null, 2);
+
+        if (data.errors && data.errors.length > 0) {
+            document.getElementById("error").innerText =
+                data.errors.join("\n");
+        } else {
+            document.getElementById("error").innerText = "";
+        }
+
+        highlightErrors(code, data.errors || []);
+    });
+}
+
+function highlightErrors(code, errors) {
+    let lines = code.split("\n");
+    let html = "";
+
+    for (let line of lines) {
+        let hasError = false;
+
+        for (let e of errors) {
+            let parts = e.split(": ");
+            if (parts.length > 1 && line.includes(parts[1])) {
+                hasError = true;
+                break;
+            }
+        }
+
+        if (hasError && line.trim() !== "") {
+            html += `<div style="background:rgba(255,0,0,0.3)">${line}</div>`;
+        } else {
+            html += `<div>${line}</div>`;
+        }
+    }
+
+    document.getElementById("highlight").innerHTML = html;
+}
+
+function clearAll() {
+    document.getElementById("tokens").innerText = "";
+    document.getElementById("symbols").innerText = "";
+    document.getElementById("ir").innerText = "";
+    document.getElementById("ast").innerText = "";
+    document.getElementById("error").innerText = "";
+    document.getElementById("highlight").innerHTML = "";
+}
+</script>
+
+</body>
+</html>
