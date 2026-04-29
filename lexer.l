@@ -1,4 +1,5 @@
 %option noyywrap
+%option yylineno
 
 %{
 #include "ast.h"
@@ -16,6 +17,7 @@ vector<string> tokens;
 %%
 
 "int"      { tokens.push_back("INT"); return INT; }
+"float"    { tokens.push_back("FLOAT"); return FLOAT; }
 "if"       { tokens.push_back("IF"); return IF; }
 "else"     { tokens.push_back("ELSE"); return ELSE; }
 "while"    { tokens.push_back("WHILE"); return WHILE; }
@@ -28,15 +30,16 @@ vector<string> tokens;
 "("        { tokens.push_back("LPAREN"); return LPAREN; }
 ")"        { tokens.push_back("RPAREN"); return RPAREN; }
 
-[0-9]+     { tokens.push_back(string("NUM(") + yytext + ")"); yylval.num = atoi(yytext); return NUMBER; }
+[0-9]+     { tokens.push_back(string("NUM(")+yytext+")"); yylval.num = atoi(yytext); return NUMBER; }
 
-[a-zA-Z_]+ { tokens.push_back(string("ID(") + yytext + ")"); yylval.str = strdup(yytext); return IDENTIFIER; }
+[a-zA-Z_]+ { tokens.push_back(string("ID(")+yytext+")"); yylval.str = strdup(yytext); return IDENTIFIER; }
 
 "+"        { tokens.push_back("PLUS"); return PLUS; }
 "="        { tokens.push_back("ASSIGN"); return ASSIGN; }
 ";"        { tokens.push_back("SEMICOLON"); return SEMICOLON; }
 
-[ \t\n]    { }
+[ \t]      { }
+\n         { }
 
 .          { return yytext[0]; }
 

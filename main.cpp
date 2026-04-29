@@ -7,8 +7,6 @@
 using json = nlohmann::json;
 using namespace std;
 
-int tempCount = 0;
-
 extern int yyparse();
 extern ASTNode* root;
 
@@ -30,7 +28,12 @@ int main() {
             {"type", entry.second.first},
             {"occurrences", entry.second.second}
         });
+
+        if (entry.second.second == 0) {
+            errors.push_back("Unused variable: " + entry.first);
+        }
     }
+
     output["symbol_table"] = symtab;
 
     if (root) {

@@ -1,67 +1,52 @@
-#ifndef AST_H
-#define AST_H
-
+#pragma once
 #include <string>
 #include <vector>
+#include <iostream>
 #include "json.hpp"
 
-using json = nlohmann::json;
 using namespace std;
+using json = nlohmann::json;
 
-/* ?? FIX: extern (C++11 safe) */
 extern int tempCount;
+extern int labelCount;
 
-/* temp generator */
-inline string newTemp() {
-    return "t" + to_string(++tempCount);
-}
+string newTemp();
+string newLabel();
 
-/* Base */
 class ASTNode {
 public:
     virtual json toJson() = 0;
     virtual string generateIR(vector<string>& code) = 0;
 };
 
-/* Number */
 class NumberNode : public ASTNode {
 public:
     int value;
-
     NumberNode(int v) : value(v) {}
 
-    json toJson() override {
-        return {
-            {"type", "number"},
-            {"value", value}
-        };
+    json toJson() {
+        return {{"type","number"},{"value",value}};
     }
 
-    string generateIR(vector<string>& code) override {
+    string generateIR(vector<string>& code) {
         return to_string(value);
     }
 };
 
-/* Identifier */
 class IdentifierNode : public ASTNode {
 public:
     string name;
+    IdentifierNode(string n) : name(n) {}
 
-    IdentifierNode(char* n) : name(n) {}
-
-    json toJson() override {
-        return {
-            {"type", "identifier"},
-            {"name", name}
-        };
+    json toJson() {
+        return {{"type","identifier"},{"name",name}};
     }
 
-    string generateIR(vector<string>& code) override {
+    string generateIR(vector<string>& code) {
         return name;
     }
 };
 
-/* Binary Operation */
 class BinaryOpNode : public ASTNode {
 public:
     string op;
@@ -71,48 +56,118 @@ public:
     BinaryOpNode(string o, ASTNode* l, ASTNode* r)
         : op(o), left(l), right(r) {}
 
-    json toJson() override {
+    json toJson() {
         return {
-            {"type", "binary"},
-            {"op", op},
-            {"left", left->toJson()},
-            {"right", right->toJson()}
+            {"type","binary"},
+            {"op",op},
+            {"left",left->toJson()},
+            {"right",right->toJson()}
         };
     }
 
-    string generateIR(vector<string>& code) override {
-        string leftVal = left->generateIR(code);
-        string rightVal = right->generateIR(code);
-
-        string temp = newTemp();
-        code.push_back(temp + " = " + leftVal + " " + op + " " + rightVal);
-
-        return temp;
+    string generateIR(vector<string>& code) {
+        string l = left->generateIR(code);
+        string r = right->generateIR(code);
+        string t = newTemp();
+        code.push_back(t + " = " + l + " " + op + " " + r);
+        return t;
     }
 };
 
-/* Assignment */
 class AssignNode : public ASTNode {
 public:
     string name;
     ASTNode* value;
 
-    AssignNode(char* n, ASTNode* v)
-        : name(n), value(v) {}
+    AssignNode(string n, ASTNode* v) : name(n), value(v) {}
 
-    json toJson() override {
+    json toJson() {
         return {
-            {"type", "assign"},
-            {"name", name},
-            {"value", value->toJson()}
+            {"type","assign"},
+            {"name",name},
+            {"value",value->toJson()}
         };
     }
 
-    string generateIR(vector<string>& code) override {
-        string val = value->generateIR(code);
-        code.push_back(name + " = " + val);
+    string generateIR(vector<string>& code) {
+        string v = value->generateIR(code);
+        code.push_back(name + " = " + v);
         return name;
     }
 };
 
-#endif
+class IfNode : public ASTNode {
+public:
+    ASTNode* condition;
+    ASTNode* thenBranch;
+    ASTNode* elseBranch;
+
+    IfNode(ASTNode* c, ASTNode* t, ASTNode* e=nullptr)
+        : condition(c), thenBranch(t), elseBranch(e) {}
+
+    json toJson() {
+        return {
+            {"type","if"},
+            {"condition",condition->toJson()},
+            {"then",thenBranch ? thenBranch->toJson() : json()},
+            {"else",elseBranch ? elseBranch->toJson() : json()}
+        };
+    }
+
+    string generateIR(vector<string>& code) {
+        string cond = condition->generateIR(code);
+        string L1 = newLabel();
+        string L2 = newLabel();
+
+        code.push_back("if " + cond + " goto " + L1);
+        code.push_back("goto " + L2);
+
+        code.push_back(L1 + ":");
+        if (thenBranch) thenBranch->generateIR(code);
+
+        if (elseBranch) {
+            string L3 = newLabel();
+            code.push_back("goto " + L3);
+            code.push_back(L2 + ":");
+            elseBranch->generateIR(code);
+            code.push_back(L3 + ":");
+        } else {
+            code.push_back(L2 + ":");
+        }
+
+        return "";
+    }
+};
+
+class WhileNode : public ASTNode {
+public:
+    ASTNode* condition;
+    ASTNode* body;
+
+    WhileNode(ASTNode* c, ASTNode* b)
+        : condition(c), body(b) {}
+
+    json toJson() {
+        return {
+            {"type","while"},
+            {"condition",condition->toJson()},
+            {"body",body->toJson()}
+        };
+    }
+
+    string generateIR(vector<string>& code) {
+        string L1 = newLabel();
+        string L2 = newLabel();
+
+        code.push_back(L1 + ":");
+        string cond = condition->generateIR(code);
+        code.push_back("if " + cond + " goto " + L2);
+
+        if (body) body->generateIR(code);
+
+        code.push_back("goto " + L1);
+        code.push_back(L2 + ":");
+
+        return "";
+    }
+};

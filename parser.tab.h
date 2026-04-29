@@ -42,17 +42,18 @@
      NUMBER = 258,
      IDENTIFIER = 259,
      INT = 260,
-     IF = 261,
-     ELSE = 262,
-     WHILE = 263,
-     PLUS = 264,
-     ASSIGN = 265,
-     SEMICOLON = 266,
-     LT = 267,
-     LBRACE = 268,
-     RBRACE = 269,
-     LPAREN = 270,
-     RPAREN = 271
+     FLOAT = 261,
+     IF = 262,
+     ELSE = 263,
+     WHILE = 264,
+     PLUS = 265,
+     ASSIGN = 266,
+     SEMICOLON = 267,
+     LT = 268,
+     LBRACE = 269,
+     RBRACE = 270,
+     LPAREN = 271,
+     RPAREN = 272
    };
 #endif
 
@@ -63,7 +64,7 @@ typedef union YYSTYPE
 {
 
 /* Line 1676 of yacc.c  */
-#line 20 "parser.y"
+#line 35 "parser.y"
 
     int num;
     char* str;
@@ -72,7 +73,7 @@ typedef union YYSTYPE
 
 
 /* Line 1676 of yacc.c  */
-#line 76 "parser.tab.h"
+#line 77 "parser.tab.h"
 } YYSTYPE;
 # define YYSTYPE_IS_TRIVIAL 1
 # define yystype YYSTYPE /* obsolescent; will be withdrawn */
